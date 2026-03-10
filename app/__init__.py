@@ -8,6 +8,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os  
 
+
 load_dotenv()
 
 db = SQLAlchemy()
@@ -40,12 +41,14 @@ def create_app():
     from app.controllers.user.auth_controller import auth_bp
     from app.controllers.disease_controller import disease_bp
     from app.controllers.tips.tips_controller import tips_bp
-    from app.controllers.weather.weather_controller import weather_bp
+    from routes.weather_route import weather_bp
+    from routes.soilscanner_route import soil_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(tips_bp, url_prefix="/api")
     app.register_blueprint(disease_bp, url_prefix="/api")
     app.register_blueprint(weather_bp, url_prefix="/api")  
+    app.register_blueprint(soil_bp, url_prefix="/api") 
 
     with app.app_context():
         db.create_all()
