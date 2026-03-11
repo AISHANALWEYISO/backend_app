@@ -1,13 +1,8 @@
-
-
-
-from flask import Flask
+from flask import Flask, request, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
-from flask_cors import CORS
 from dotenv import load_dotenv
-import os  
-
+import os
 
 load_dotenv()
 
@@ -16,39 +11,49 @@ jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-key')
 
-    CORS(app, resources={
-        r"/api/*": {  # Apply CORS only to /api routes
-            "origins": [
-                "http://localhost:64900",  # Flutter Web dev
-                "http://127.0.0.1:64900",  # Alternative Flutter Web URL
-                "http://localhost:*",       # Allow any localhost port (dev only)
-            ],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-        }
-    })
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key')
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-key')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+        'DATABASE_URL',
+        'mysql+pymysql://root:@localhost/yucca_agro'
+    )
 
     db.init_app(app)
     jwt.init_app(app)
-    CORS(app)
 
-    # Register Blueprints
     from app.controllers.user.auth_controller import auth_bp
     from app.controllers.disease_controller import disease_bp
     from app.controllers.tips.tips_controller import tips_bp
     from routes.weather_route import weather_bp
     from routes.soilscanner_route import soil_bp
 
-    app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(tips_bp, url_prefix="/api")
     app.register_blueprint(disease_bp, url_prefix="/api")
-    app.register_blueprint(weather_bp, url_prefix="/api")  
-    app.register_blueprint(soil_bp, url_prefix="/api") 
+    app.register_blueprint(weather_bp, url_prefix="/api")
+    app.register_blueprint(soil_bp, url_prefix="/api")
+
+    @app.before_request
+    def handle_preflight():
+        if request.method == 'OPTIONS':
+            res = make_response('', 200)
+            res.headers.remove('Access-Control-Allow-Origin')
+            res.headers['Access-Control-Allow-Origin'] = '*'
+            res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            return res
+
+    @app.after_request
+    def add_cors(response):
+        response.headers.remove('Access-Control-Allow-Origin')
+        response.headers.remove('Access-Control-Allow-Headers')
+        response.headers.remove('Access-Control-Allow-Methods')
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        return response
 
     with app.app_context():
         db.create_all()
