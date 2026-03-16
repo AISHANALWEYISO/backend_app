@@ -25,7 +25,7 @@ def register():
     email = data.get("email")
     password = data.get("password")
     confirm_password = data.get("confirm_password")
-    usertype = "Farmer"  # Always Farmer
+    usertype = "Farmer"
 
     if not all([name, email, password, confirm_password]):
         return jsonify({"message": "Missing required fields"}), 400
@@ -41,7 +41,7 @@ def register():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({"message": "Account created successfully! Please sign in."}), 201
+    return jsonify({"message": "Account created successfully!"}), 201
 
 
 # ── Login ──
@@ -59,8 +59,11 @@ def login():
 
     user = User.query.filter_by(email=email).first()
 
-    if not user or not user.check_password(password):
-        return jsonify({"message": "Invalid email or password"}), 401
+    if not user:
+        return jsonify({"message": "Email does not exist"}), 401
+
+    if not user.check_password(password):
+        return jsonify({"message": "Incorrect password"}), 401
 
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
@@ -91,9 +94,9 @@ def send_otp():
 
     user = User.query.filter_by(email=email).first()
 
-    # Security: don't reveal if email exists or not
+    # Tell user clearly if email doesn't exist
     if not user:
-        return jsonify({"message": "If that email exists, an OTP has been sent"}), 200
+        return jsonify({"message": "Email does not exist", "success": False}), 404
 
     result = send_otp_email(email)
 
@@ -143,7 +146,7 @@ def reset_password():
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"message": "User not found"}), 404
+        return jsonify({"message": "Email does not exist"}), 404
 
     user.password = generate_password_hash(new_password)
     db.session.commit()
