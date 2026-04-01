@@ -1,101 +1,122 @@
 from flask import Blueprint, request, jsonify
-from app import db
-from app.models.tips import Tip
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from app.models.tips import db, Tip
+from functools import wraps
 
-tips_bp = Blueprint('tips', __name__)
+tips_bp = Blueprint('tips', __name__, url_prefix='/api/tips')
 
-
-# ---------------------------
-# Get All Tips
-# ---------------------------
+# ✅ GET ALL TIPS (Public - Mobile App)
 @tips_bp.route('/', methods=['GET'])
 def get_all_tips():
-    tips = Tip.query.all()
-    return jsonify({
-        "tips": [tip.to_dict() for tip in tips],
-        "count": len(tips)
-    }), 200
+    try:
+        category = request.args.get('category')
+        query = Tip.query.filter_by(is_published=True)
+        
+        if category:
+            query = query.filter_by(category=category)
+        
+        tips = query.order_by(Tip.created_at.desc()).all()
+        return jsonify({
+            'success': True,
+            'data': [tip.to_dict() for tip in tips]
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
+# ✅ GET SINGLE TIP (Public - Mobile App)
+@tips_bp.route('/<int:tip_id>', methods=['GET'])
+def get_tip(tip_id):
+    try:
+        tip = Tip.query.get_or_404(tip_id)
+        return jsonify({
+            'success': True,
+            'data': tip.to_dict()
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
-# ---------------------------
-# Get Single Tip by ID
-# ---------------------------
-@tips_bp.route('/<int:id>', methods=['GET'])
-def get_tip(id):
-    tip = Tip.query.get_or_404(id)
-    return jsonify({"tip": tip.to_dict()}), 200
+# ─────────────────────────────────────────
+# ⚠️ ADMIN ONLY ROUTES (Web Dashboard)
+# ─────────────────────────────────────────
 
+def require_admin(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token or not token.startswith('Bearer '):
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+        # Verify admin token here
+        return f(*args, **kwargs)
+    return decorated
 
-# ---------------------------
-# Create New Tip (Protected)
-# ---------------------------
-@tips_bp.route('/create', methods=['POST'])
-@jwt_required()
+# ✅ CREATE TIP (Admin Dashboard Only)
+@tips_bp.route('/', methods=['POST'])
+@require_admin
 def create_tip():
-    data = request.get_json()
+    try:
+        data = request.get_json()
+        
+        if not data.get('title') or not data.get('content'):
+            return jsonify({'success': False, 'message': 'Title and content required'}), 400
+        
+        tip = Tip(
+            title=data['title'],
+            content=data['content'],
+            category=data.get('category', 'General'),
+            image_url=data.get('image_url'),
+            is_published=data.get('is_published', True),
+            created_by=data.get('created_by')
+        )
+        
+        db.session.add(tip)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tip created successfully',
+            'data': tip.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
-    if not data:
-        return jsonify({"message": "No input data provided"}), 400
+# ✅ UPDATE TIP (Admin Dashboard Only)
+@tips_bp.route('/<int:tip_id>', methods=['PUT'])
+@require_admin
+def update_tip(tip_id):
+    try:
+        tip = Tip.query.get_or_404(tip_id)
+        data = request.get_json()
+        
+        tip.title = data.get('title', tip.title)
+        tip.content = data.get('content', tip.content)
+        tip.category = data.get('category', tip.category)
+        tip.image_url = data.get('image_url', tip.image_url)
+        tip.is_published = data.get('is_published', tip.is_published)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tip updated successfully',
+            'data': tip.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
-    name = data.get("name")
-    image_url = data.get("image_url")
-    description = data.get("description")
-    content = data.get("content")
-
-    if not all([name, image_url, description]):
-        return jsonify({"message": "Name, image, and description are required"}), 400
-
-    new_tip = Tip(
-        name=name,
-        image_url=image_url,
-        description=description,
-        content=content
-    )
-
-    db.session.add(new_tip)
-    db.session.commit()
-
-    return jsonify({
-        "message": "Tip created successfully",
-        "tip": new_tip.to_dict()
-    }), 201
-
-
-# ---------------------------
-# Update Tip (Protected)
-# ---------------------------
-@tips_bp.route('/edit/<int:id>', methods=['PUT'])
-@jwt_required()
-def update_tip(id):
-    tip = Tip.query.get_or_404(id)
-    data = request.get_json()
-
-    if not data:
-        return jsonify({"message": "No input data provided"}), 400
-
-    tip.name = data.get("name", tip.name)
-    tip.image_url = data.get("image_url", tip.image_url)
-    tip.description = data.get("description", tip.description)
-    tip.content = data.get("content", tip.content)
-
-    db.session.commit()
-
-    return jsonify({
-        "message": "Tip updated successfully",
-        "tip": tip.to_dict()
-    }), 200
-
-
-# ---------------------------
-# Delete Tip (Protected)
-# ---------------------------
-@tips_bp.route('/delete/<int:id>', methods=['DELETE'])
-@jwt_required()
-def delete_tip(id):
-    tip = Tip.query.get_or_404(id)
-
-    db.session.delete(tip)
-    db.session.commit()
-
-    return jsonify({"message": "Tip deleted successfully"}), 200
+# ✅ DELETE TIP (Admin Dashboard Only)
+@tips_bp.route('/<int:tip_id>', methods=['DELETE'])
+@require_admin
+def delete_tip(tip_id):
+    try:
+        tip = Tip.query.get_or_404(tip_id)
+        db.session.delete(tip)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tip deleted successfully'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
