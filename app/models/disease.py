@@ -1,11 +1,24 @@
-from app import db
+# app/models/disease.py
+from app.extensions import db
 
 class Disease(db.Model):
     __tablename__ = 'diseases'
+    
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
+    name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     signs = db.Column(db.Text)
     prevention = db.Column(db.Text)
     treatment = db.Column(db.Text)
     image = db.Column(db.String(200))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'signs': self.signs,
+            'prevention': self.prevention,
+            'treatment': self.treatment,
+            'image': self.image
+        }

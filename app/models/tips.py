@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from app.extensions import db
 
 class Tip(db.Model):
     __tablename__ = 'tips'
@@ -10,6 +8,7 @@ class Tip(db.Model):
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     image_url = db.Column(db.String(500), nullable=True)
+    category = db.Column(db.String(50), default='General')
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
