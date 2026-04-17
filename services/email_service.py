@@ -26,15 +26,15 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
             smtp.login(GMAIL_USER, GMAIL_PASSWORD)
             smtp.send_message(msg)
 
-        print(f"✅ Email sent to {to_email}")
+        print(f" Email sent to {to_email}")
         return True
 
     except Exception as e:
-        print(f"❌ Email failed: {e}")
+        print(f" Email failed: {e}")
         return False
 
 
-# ── Email Templates ──────────────────────────────────────────────────────────
+# Email Templates 
 
 def email_order_created(farmer_name, farmer_email, order_ref,
                         amount, credits, package, payment_method):
@@ -52,18 +52,15 @@ Thank you for choosing Yucca Agro!
 
 Your order has been created. Please follow the steps below to complete your payment:
 
-━━━━━━━━━━━━━━━━━━━━━━━━
 ORDER DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━
 Order Reference : {order_ref}
 Package         : {package}
 Credits         : {credits} scan(s)
 Amount          : UGX {amount:,}
 Payment Method  : {payment_method}
 
-━━━━━━━━━━━━━━━━━━━━━━━━
 HOW TO PAY
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 1. Send UGX {amount:,} to {payment_method} number: {send_to}
 2. Use "{order_ref}" as your payment reference/reason
 3. After sending, you will receive an SMS with a Transaction ID
@@ -71,16 +68,16 @@ HOW TO PAY
 4. Copy that Transaction ID
 5. Go back to the Yucca Agro app and enter the Transaction ID
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 IMPORTANT
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 - Credits are added after we verify your payment
 - Verification takes a few minutes
 - Keep your Transaction ID safe
 
 If you have any issues, reply to this email.
 
-Happy Farming! 🌱
+Happy Farming! 
 Yucca Agro Team
 """
     send_email(farmer_email, subject, body)
@@ -92,20 +89,20 @@ def email_admin_new_payment(farmer_name, farmer_email, farmer_phone,
     """
     Sent to admin (Aisha) when farmer submits their transaction ID.
     """
-    subject = f"💰 New Payment Submitted – {order_ref}"
+    subject = f" New Payment Submitted – {order_ref}"
 
     body = f"""New payment submitted on Yucca Agro!
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 FARMER DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 Name           : {farmer_name}
 Email          : {farmer_email}
 Phone          : {farmer_phone}
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 PAYMENT DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 Order Ref      : {order_ref}
 Package        : {package}
 Credits        : {credits} scan(s)
@@ -113,9 +110,9 @@ Amount         : UGX {amount:,}
 Method         : {payment_method}
 Transaction ID : {transaction_id}
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 ACTION REQUIRED
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 1. Check your {payment_method} app/phone to confirm 
    UGX {amount:,} was received from the farmer
 
@@ -127,7 +124,7 @@ ACTION REQUIRED
    POST /api/payment/admin/reject/{order_id}
    Body: {{"reason": "Transaction ID not found"}}
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 Yucca Agro System
 """
@@ -139,30 +136,29 @@ def email_payment_approved(farmer_name, farmer_email,
     """
     Sent to farmer when admin approves their payment.
     """
-    subject = f"✅ Payment Approved – {credits} Credits Added!"
+    subject = f" Payment Approved – {credits} Credits Added!"
 
     body = f"""Dear {farmer_name},
 
 Great news! Your payment has been verified and approved.
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 CREDITS ADDED
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 Order Reference  : {order_ref}
 Credits Added    : {credits} scan(s)
 Total Credits    : {total_credits} scan(s)
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 You can now use your credits to:
-- Scan your soil 🌱
-- Detect crop diseases 🔬
-- Get farming tips 📋
+- Scan your soil 
+
 
 Open the Yucca Agro app to start scanning!
 
 Thank you for trusting Yucca Agro.
 
-Happy Farming! 🌱
+Happy Farming! 
 Yucca Agro Team
 """
     send_email(farmer_email, subject, body)
@@ -172,20 +168,20 @@ def email_payment_rejected(farmer_name, farmer_email, order_ref, reason):
     """
     Sent to farmer when admin rejects their payment.
     """
-    subject = f"❌ Payment Could Not Be Verified – {order_ref}"
+    subject = f" Payment Could Not Be Verified – {order_ref}"
 
     body = f"""Dear {farmer_name},
 
 Unfortunately, we could not verify your payment for order {order_ref}.
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 REASON
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 {reason}
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 WHAT TO DO
-━━━━━━━━━━━━━━━━━━━━━━━━
+
 1. Check that you sent money to the correct number
 2. Make sure you entered the correct Transaction ID
 3. Try submitting your order again in the app

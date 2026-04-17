@@ -60,7 +60,7 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if not user:
-        return jsonify({"message": "Email does not exist"}), 401
+        return jsonify({"message": "Sign Up to continue"}), 401
 
     if not user.check_password(password):
         return jsonify({"message": "Incorrect password"}), 401
